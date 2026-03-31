@@ -1,51 +1,47 @@
-# Using Java-TOTP with Spring Boot
-
-
+# Using Karabela TOTP with Spring Boot
 
 ## Installation
 
-To get started using the library in a Spring Boot project, add the `totp-spring-boot-starter` dependency:
+Add the starter dependency to your Spring Boot 3.x project:
 
-#### Maven
+### Maven
 
 ```xml
 <dependency>
-  <groupId>dev.samstevens.totp</groupId>
-  <artifactId>totp-spring-boot-starter</artifactId>
-  <version>1.7.1</version>
+    <groupId>io.github.karabela</groupId>
+    <artifactId>karabela-totp-spring-boot-starter</artifactId>
+    <version>2.0.0</version>
 </dependency>
 ```
 
-#### Gradle
+### Gradle
 
+```groovy
+implementation 'io.github.karabela:karabela-totp-spring-boot-starter:2.0.0'
 ```
-dependencies {
-  compile 'dev.samstevens.totp:totp-spring-boot-starter:1.7.1'
-}
-```
-
-
 
 ## Usage
 
-#### Generating QR codes
+### Generating QR codes
 
 ```java
 @Controller
 public class MfaSetupController {
 
-    @Autowired
-    private SecretGenerator secretGenerator;
+    private final SecretGenerator secretGenerator;
+    private final QrDataFactory qrDataFactory;
+    private final QrGenerator qrGenerator;
 
-    @Autowired
-    private QrDataFactory qrDataFactory;
-
-    @Autowired
-    private QrGenerator qrGenerator;
+    public MfaSetupController(SecretGenerator secretGenerator,
+                              QrDataFactory qrDataFactory,
+                              QrGenerator qrGenerator) {
+        this.secretGenerator = secretGenerator;
+        this.qrDataFactory = qrDataFactory;
+        this.qrGenerator = qrGenerator;
+    }
 
     @GetMapping("/mfa/setup")
     public String setupDevice() throws QrGenerationException {
-        // Generate and store the secret
         String secret = secretGenerator.generate();
 
         QrData data = qrDataFactory.newBuilder()
@@ -54,118 +50,78 @@ public class MfaSetupController {
             .issuer("AppName")
             .build();
 
-        // Generate the QR code image data as a base64 string which
-        // can be used in an <img> tag:
         String qrCodeImage = getDataUriForImage(
-          qrGenerator.generate(data), 
-          qrGenerator.getImageMimeType()
+            qrGenerator.generate(data),
+            qrGenerator.getImageMimeType()
         );
-        ...
+        // ...
     }
 }
 ```
 
-
-
-#### Verifying a code
-
-To verify a code that is submitted by a user, inject the `CodeVerifier` service and call `isValidCode`:
-
+### Verifying a code
 
 ```java
 @Controller
 public class MfaVerifyController {
-    @Autowired
-    private CodeVerifier verifier;
+
+    private final CodeVerifier verifier;
+
+    public MfaVerifyController(CodeVerifier verifier) {
+        this.verifier = verifier;
+    }
 
     @PostMapping("/mfa/verify")
     @ResponseBody
     public String verify(@RequestParam String code) {
-        // secret is fetched from some storage
-
+        // secret fetched from storage
         if (verifier.isValidCode(secret, code)) {
             return "CORRECT CODE";
         }
-
         return "INCORRECT CODE";
     }
 }
 ```
 
-
-
-#### Generating recovery codes
-
-To generate recovery codes, use the `RecoveryCodeGenerator` service:
+### Generating recovery codes
 
 ```java
-Controller
+@Controller
 public class MfaRecoveryCodesController {
-    @Autowired
-    private RecoveryCodeGenerator recoveryCodeGenerator;
+
+    private final RecoveryCodeGenerator recoveryCodeGenerator;
+
+    public MfaRecoveryCodesController(RecoveryCodeGenerator recoveryCodeGenerator) {
+        this.recoveryCodeGenerator = recoveryCodeGenerator;
+    }
 
     @GetMapping("/mfa/recovery-codes")
     public String recoveryCodes() {
         String[] codes = recoveryCodeGenerator.generateCodes(16);
-        ...
+        // ...
     }
 }
 ```
 
+## Configuration
 
+Configure via `application.properties`:
 
+```properties
+# Secret length (default: 32)
+totp.secret.length=32
 
+# Code length (default: 6)
+totp.code.length=6
 
+# Time period in seconds (default: 30)
+totp.time.period=30
 
-## Configuring
-
-Configuring the various options that are available with the library can be achieved by setting application properties or defining beans.
-
-
-
-##### Secret Length
-
-Set the `totp.secret.length` property to the desired number of characters in `application.properties`:
-
-```
-totp.secret.length=128
-```
-
-
-
-##### Code Length
-
-Set the `totp.code.length` property to the desired number of characters in `application.properties`:
-
-```
-totp.code.length=8
+# Allowed time period discrepancy (default: 1)
+totp.time.discrepancy=1
 ```
 
-
-
-##### Time Period
-
-Set the `totp.time.period` property to the desired number of characters in `application.properties`:
-
-```
-totp.time.period=15
-```
-
-
-
-##### Time Discrepancy
-
-Set the `totp.time.discrepancy` property to the desired number of characters in `application.properties`:
-
-```
-totp.time.discrepancy=2
-```
-
-
-
-##### Hashing Algorithm
-
-The default hashing algorithm is SHA1. To change it to another algorithm, define a `HashingAlgorithm` bean which returns the desired algorithm:
+### Custom hashing algorithm
 
 ```java
 @Configuration
@@ -177,11 +133,7 @@ public class AppConfig {
 }
 ```
 
-
-
-##### Time Provider
-
-The default time provider uses the system time to fetch the time. To change this, define a `TimeProvider` bean that returns a `TimeProvider` instance.
+### Custom time provider
 
 ```java
 @Configuration
