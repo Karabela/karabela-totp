@@ -69,6 +69,27 @@ class DefaultCodeGeneratorTest {
         assertNotNull(e.getCause());
     }
 
+    @Test
+    void testNoArgConstructorUsesSha1With6Digits() throws CodeGenerationException {
+        DefaultCodeGenerator g = new DefaultCodeGenerator();
+        String code = g.generate("W3C5B3WKR4AUKFVWYU2WNMYB756OAKWY", Math.floorDiv(1567631536, 30));
+        assertEquals(6, code.length());
+        assertEquals("082371", code);
+    }
+
+    @Test
+    void testBoundaryDigitValues() throws CodeGenerationException {
+        // 1 digit (minimum)
+        DefaultCodeGenerator g1 = new DefaultCodeGenerator(HashingAlgorithm.SHA1, 1);
+        String code1 = g1.generate("W3C5B3WKR4AUKFVWYU2WNMYB756OAKWY", 1567631536);
+        assertEquals(1, code1.length());
+
+        // 10 digits (maximum)
+        DefaultCodeGenerator g10 = new DefaultCodeGenerator(HashingAlgorithm.SHA1, 10);
+        String code10 = g10.generate("W3C5B3WKR4AUKFVWYU2WNMYB756OAKWY", 1567631536);
+        assertEquals(10, code10.length());
+    }
+
     private String generateCode(HashingAlgorithm algorithm, String secret, int time) throws CodeGenerationException {
         long currentBucket = Math.floorDiv(time, 30);
         DefaultCodeGenerator g = new DefaultCodeGenerator(algorithm);

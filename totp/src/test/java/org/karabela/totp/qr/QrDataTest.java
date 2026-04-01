@@ -50,4 +50,84 @@ class QrDataTest {
                         .build()
         );
     }
+
+    @Test
+    void testGetters() {
+        QrData data = new QrData.Builder()
+                .label("user@example.com")
+                .secret("JBSWY3DPEHPK3PXP")
+                .issuer("MyApp")
+                .algorithm(HashingAlgorithm.SHA512)
+                .digits(8)
+                .period(60)
+                .build();
+
+        assertEquals("totp", data.getType());
+        assertEquals("user@example.com", data.getLabel());
+        assertEquals("JBSWY3DPEHPK3PXP", data.getSecret());
+        assertEquals("MyApp", data.getIssuer());
+        assertEquals("SHA512", data.getAlgorithm());
+        assertEquals(8, data.getDigits());
+        assertEquals(60, data.getPeriod());
+    }
+
+    @Test
+    void testBuilderDefaults() {
+        QrData data = new QrData.Builder()
+                .label("test")
+                .secret("test-secret")
+                .build();
+
+        assertEquals("SHA1", data.getAlgorithm());
+        assertEquals(6, data.getDigits());
+        assertEquals(30, data.getPeriod());
+    }
+
+    @Test
+    void testUriWithNullIssuer() {
+        QrData data = new QrData.Builder()
+                .label("test")
+                .secret("test-secret")
+                .build();
+
+        String uri = data.getUri();
+        assertNotNull(uri);
+        assertTrue(uri.contains("issuer=&"));
+    }
+
+    @Test
+    void testUriEncodesSpecialCharacters() {
+        QrData data = new QrData.Builder()
+                .label("user name+test@example.com")
+                .secret("ABC123")
+                .issuer("My App & Co.")
+                .build();
+
+        String uri = data.getUri();
+        assertFalse(uri.contains(" "));
+        assertTrue(uri.contains("%20"));
+        assertTrue(uri.contains("%26"));
+        assertTrue(uri.contains("%40"));
+    }
+
+    @Test
+    void testNullSecretThrowsOnSet() {
+        assertThrows(NullPointerException.class, () ->
+                new QrData.Builder().secret(null)
+        );
+    }
+
+    @Test
+    void testNullIssuerThrowsOnSet() {
+        assertThrows(NullPointerException.class, () ->
+                new QrData.Builder().issuer(null)
+        );
+    }
+
+    @Test
+    void testNullAlgorithmThrowsOnSet() {
+        assertThrows(NullPointerException.class, () ->
+                new QrData.Builder().algorithm(null)
+        );
+    }
 }
